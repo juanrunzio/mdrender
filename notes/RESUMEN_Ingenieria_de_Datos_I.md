@@ -1,3 +1,14 @@
+---
+title: Ingeniería de Datos I — Resumen
+description: Guía de estudio completa y autocontenida de la materia Ingeniería de Datos I (UADE), organizada por UVAs, con teoría, ejemplos de SQL y diagramas.
+tags:
+  - base de datos
+  - sql
+  - algebra relacional
+  - uade
+  - apuntes
+---
+
 # Ingeniería de Datos I — Resumen de la materia
 
 > Guía de estudio completa y autocontenida de la materia **Ingeniería de Datos I (UADE)**.
@@ -48,6 +59,13 @@ Los datos se organizan jerárquicamente:
 
 4. **Bases NoSQL (Siglo XXI)**: para Big Data y datos no estructurados. **Escalabilidad horizontal**, **flexibilidad de esquema**, rendimiento optimizado. Complementan (no reemplazan) a las relacionales.
 
+```mermaid
+flowchart LR
+    A["📁 Sistemas de archivo<br/>1950–1960<br/>planos · redundancia"] --> B["🌳 Jerárquicas y de red<br/>1960–1970<br/>árbol · grafo"]
+    B --> C["🔗 Relacionales<br/>1970<br/>Codd · SQL · tablas"]
+    C --> D["☁️ NoSQL<br/>siglo XXI<br/>Big Data · escalable"]
+```
+
 ### 3. Beneficios de una BD frente a archivos planos
 
 - **Control centralizado** de los datos.
@@ -91,11 +109,9 @@ Técnica que transforma una **clave** en una **dirección** (valor hash de longi
 
 **Algoritmos más comunes**:
 
-```text
-División:        h(k) = k mod m        (m = tamaño de la tabla)
-Multiplicación:  usa una constante para dispersar claves
-Plegamiento:     divide y suma bloques de la clave
-```
+- **División**: $h(k) = k \bmod m$ (donde $m$ es el tamaño de la tabla).
+- **Multiplicación**: usa una constante para dispersar las claves.
+- **Plegamiento**: divide y suma bloques de la clave.
 
 **Ejemplo paso a paso** (tabla de tamaño 7, claves: 10, 22, 31, 4, 15, 28, 17, 88, 59 con `h(k)=k mod 7`):
 
@@ -201,9 +217,9 @@ Software que interactúa con la BD, los usuarios y las aplicaciones.
 
 ### 4. Propiedades ACID
 
-| Propiedad | Significado | Ejemplo (transferencia de $100 de Ana a Carlos) |
+| Propiedad | Significado | Ejemplo (transferencia de 100 de Ana a Carlos) |
 |-----------|-------------|--------------------------------------------------|
-| **Atomicidad** | Todo o nada | Se restan $100 de Ana Y se suman a Carlos, o nada. |
+| **Atomicidad** | Todo o nada | Se restan 100 de Ana Y se suman a Carlos, o nada. |
 | **Consistencia** | Datos siempre válidos (reglas) | Si el saldo no puede ser negativo, se cancela. |
 | **Aislamiento** | Transacciones no se interfieren | Otra consulta no ve el estado intermedio. |
 | **Durabilidad** | Lo confirmado persiste | Aunque se corte la luz, el cambio queda guardado. |
@@ -212,13 +228,27 @@ Software que interactúa con la BD, los usuarios y las aplicaciones.
 
 | Nivel | Qué representa | Usuarios | Elementos |
 |-------|----------------|----------|-----------|
-| **Físico (interno)** | Cómo se guardan los datos en disco | DBA, SGBD | Archivos, bloques, índices |
-| **Lógico (conceptual)** | Cómo se estructuran los datos | Desarrolladores | Tablas, relaciones, restricciones |
-| **Externo / de vista** | Visión global del negocio | Analistas, diseñadores | Entidades, atributos, relaciones |
+| **Físico** | Cómo se almacenan los datos en disco | DBA, SGBD | Archivos, bloques, índices |
+| **Lógico** | Cómo se estructuran los datos | Desarrolladores | Tablas, relaciones, restricciones |
+| **Conceptual** | Visión global del negocio (qué información se maneja y cómo se conecta) | Analistas, diseñadores | Entidades, atributos, relaciones |
+
+> **Ojo con las nomenclaturas**: algunos materiales (UADE Connect y la guía de ejercicios) usan la terminología ANSI/SPARC, que nombra los niveles de otra forma:
+> - **Interno** = nivel **físico** (cómo se guarda).
+> - **Conceptual** = nivel **lógico/global** (estructura de toda la BD).
+> - **Externo** = **vistas** de cada usuario (no la "visión global").
+>
+> Son dos maneras de hablar de lo mismo; en el parcial conviene aclarar a cuál se refiere cada término.
 
 **Independencia de datos**:
 - **Física**: cambiar el almacenamiento sin alterar la estructura lógica.
 - **Lógica**: cambiar la estructura sin afectar las aplicaciones.
+
+```mermaid
+flowchart TB
+    C["🧩 Nivel Conceptual<br/>visión global · modelo ER<br/>entidades, atributos, relaciones"]
+    C --> L["🗂️ Nivel Lógico<br/>estructura de los datos<br/>tablas, claves, restricciones"]
+    L --> F["💾 Nivel Físico<br/>almacenamiento en disco<br/>archivos, bloques, índices"]
+```
 
 ### 6. Componentes de una base de datos
 
@@ -242,7 +272,7 @@ Software que interactúa con la BD, los usuarios y las aplicaciones.
 
 ### 1. Orígenes
 
-Propuesto por **Edgar Frank Codd en 1970** ("A relational model of data for large shared data banks"), basado en **álgebra relacional** y **lógica de primer orden**. Introdujo la **independencia de datos**.
+Propuesto por **Edgar Frank Codd en 1970** ("A relational model of data for large shared data banks"), basado en **álgebra relacional** y **lógica de primer orden**. Introdujo la **independencia de datos**. Codd también formuló sus **12 reglas** para evaluar qué tan relacional es un SGBD (siguen siendo una referencia teórica).
 
 ### 2. Estructura básica
 
@@ -273,6 +303,8 @@ Una relación formal es un **subconjunto del producto cartesiano** de sus domini
 - **Derivados** vs. **almacenados**.
 
 **Restricciones de atributo**: `NOT NULL` (no nulo), `UNIQUE` (único), `DEFAULT` (valor por defecto).
+
+**Valores nulos (NULL)**: representan "desconocido" o "ausente" (no es lo mismo que 0 o cadena vacía). Una **clave primaria no puede ser NULL**. Para comparar contra nulos se usa `IS NULL` / `IS NOT NULL` (nunca `= NULL`).
 
 ### 5. Claves
 
@@ -306,6 +338,13 @@ Técnica gráfica para representar entidades, atributos y relaciones.
 | **1:N** | Un PINTOR pinta muchos CUADROS | FK en el lado N |
 | **M:N** | Un EMPLEADO aprende muchas HABILIDADES | Tabla intermedia |
 
+```mermaid
+erDiagram
+    PINTOR ||--o{ CUADROS : "pinta (1:N)"
+    EMPLEADO ||--|| TIENDA : "maneja (1:1)"
+    EMPLEADO }o--o{ HABILIDADES : "aprende (M:N)"
+```
+
 **Transformación DER Conceptual → DER Lógico**:
 1. Cada entidad → tabla.
 2. Cada atributo → columna (con tipo de dato, longitud, restricciones).
@@ -318,6 +357,22 @@ Técnica gráfica para representar entidades, atributos y relaciones.
 ### 7. Caso práctico: BD "ACADEMICA" (phpMyAdmin / MySQL)
 
 Caso de DBA: crear una BD `academica`, tabla `roles` y `alumnos`, con relación FK.
+
+```mermaid
+erDiagram
+    ROLES ||--o{ ALUMNOS : "tiene"
+    ROLES {
+        int ROL_ID PK
+        varchar ROL
+    }
+    ALUMNOS {
+        int ALUMNO_ID PK
+        varchar NOMBRE
+        varchar EMAIL
+        int LEGAJO
+        int ROL_ID FK
+    }
+```
 
 ```sql
 -- Crear base de datos (utf8_general_ci)
@@ -384,10 +439,9 @@ Lenguaje **formal** (propuesto por Codd) para consultar BD con operaciones matem
 
 Filtra **filas** que cumplen una condición. No cambia la estructura.
 
-```text
-σ(edad > 25)(Personas)              → filas con edad > 25
-σ(departamento='Ventas' ∧ edad>30)(Empleados)
-```
+$$\sigma_{\text{edad} > 25}(\text{Personas}) \;\rightarrow\; \text{filas con edad > 25}$$
+
+$$\sigma_{\text{departamento}='Ventas' \;\wedge\; \text{edad}>30}(\text{Empleados})$$
 
 Condiciones con `AND (∧)`, `OR (∨)`, `NOT (¬)` y comparadores `<, >, ≤, ≥, ≠, =`.
 
@@ -395,10 +449,9 @@ Condiciones con `AND (∧)`, `OR (∨)`, `NOT (¬)` y comparadores `<, >, ≤, �
 
 Selecciona **columnas** (subconjunto vertical). **Elimina duplicados** (relaciones son conjuntos).
 
-```text
-π(nombre, edad)(Personas)
-π_Apellido,Semestre,NumeroControl(Alumnos)
-```
+$$\pi_{\text{nombre},\,\text{edad}}(\text{Personas})$$
+
+$$\pi_{\text{Apellido},\,\text{Semestre},\,\text{NumeroControl}}(\text{Alumnos})$$
 
 ### 3. Operaciones de conjunto
 
@@ -421,13 +474,23 @@ Clientes − ClientesMorosos
 
 ### 5. Correspondencia con SQL
 
-```text
-Álgebra:  π_nombre(σ_salario>50000(empleados))
-SQL:      SELECT nombre FROM empleados WHERE salario > 50000;
+$$\pi_{\text{nombre}}\left(\sigma_{\text{salario}>50000}(\text{empleados})\right)$$
 
-Álgebra:  π_nombre(σ_Clientes.ID=Pedidos.ClienteID(Clientes × Pedidos))
-SQL:      SELECT c.Nombre FROM Clientes c JOIN Pedidos p ON c.ID = p.ClienteID;
+```sql
+SELECT nombre FROM empleados WHERE salario > 50000;
 ```
+
+$$\pi_{\text{nombre}}\left(\sigma_{\text{Clientes.ID}=\text{Pedidos.ClienteID}}(\text{Clientes} \times \text{Pedidos})\right)$$
+
+```sql
+SELECT c.Nombre FROM Clientes c JOIN Pedidos p ON c.ID = p.ClienteID;
+```
+
+**Renombramiento (ρ)**: da un alias a una relación o a sus atributos, útil para evitar ambigüedad (ej. comparar una tabla consigo misma) o para hacer compatibles las columnas antes de un `UNION`.
+
+$$\rho_{E1}(\text{Empleados}) \quad\text{→ renombra Empleados como } E1$$
+
+$$\rho_{\text{nombre}\to\text{apellido}}(\text{Personas}) \quad\text{→ renombra el atributo}$$
 
 **Diferencias**: el álgebra **no permite duplicados ni nulos**; SQL sí (por eso existen `UNION ALL`, etc.).
 
@@ -450,6 +513,15 @@ Lenguaje estándar (ANSI) para gestionar BD relacionales. **No distingue mayúsc
 | **DCL** (Data Control) | `GRANT`, `REVOKE` | Control de acceso |
 | **TCL** (Transaction Control) | `COMMIT`, `ROLLBACK`, `SAVEPOINT` | Control de transacciones |
 | **DQL** (Data Query) | `SELECT` | Consultas |
+
+```mermaid
+flowchart TD
+    SQL["🗃️ SQL"] --> DDL["DDL<br/>CREATE · ALTER · DROP · TRUNCATE"]
+    SQL --> DML["DML<br/>SELECT · INSERT · UPDATE · DELETE"]
+    SQL --> DCL["DCL<br/>GRANT · REVOKE"]
+    SQL --> TCL["TCL<br/>COMMIT · ROLLBACK · SAVEPOINT"]
+    SQL --> DQL["DQL<br/>SELECT"]
+```
 
 ### 2. DDL
 
@@ -765,6 +837,15 @@ CALL obtener_ciudades_por_clasificacion('Cabotaje');
 - **Actividad 3**: informe final (≤ 10 páginas) + video de 5 min + código a defender.
 
 **EcoFlight** (caso ejemplo): integra datos abiertos (ANAC, Secretaría de Transporte, factores de emisión ICAO/DEFRA) en una BD relacional **MySQL con XAMPP** para estimar CO₂ por vuelo.
+
+```mermaid
+flowchart LR
+    A["1. Registrar<br/>información del vuelo"] --> B["2. Identificar<br/>origen y destino"]
+    B --> C["3. Calcular<br/>distancia"]
+    C --> D["4. Asociar factor<br/>de emisión"]
+    D --> E["5. Estimar CO₂"]
+    E --> F["📊 Reportes e<br/>indicadores"]
+```
 
 ---
 
