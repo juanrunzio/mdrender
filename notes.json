@@ -1,0 +1,17 @@
+{
+  "home": "notes/bienvenida.md",
+  "notes": [
+    {
+      "path": "notes/bienvenida.md",
+      "title": "Bienvenida"
+    },
+    {
+      "path": "notes/matematicas-discretas/logica-proposicional.md",
+      "title": "Lógica proposicional"
+    },
+    {
+      "path": "notes/RESUMEN_Ingenieria_de_Datos_I.md",
+      "title": "Ingeniería de Datos I — Resumen de la materia"
+    }
+  ]
+}
