@@ -1,0 +1,57 @@
+name: Publicar en GitHub Pages
+
+# Se ejecuta en cada push a main (y a mano desde la pestaña Actions).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permisos mínimos para desplegar en Pages vía OIDC.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un deploy a la vez; no cancela el que está en curso.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generar notes.json
+        run: node scripts/build-manifest.mjs
+
+      - name: Armar el sitio (_site)
+        run: |
+          mkdir -p _site
+          cp -r index.html assets notes notes.json _site/
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Desplegar en Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
