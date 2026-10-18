@@ -19,6 +19,30 @@
   const content = $('#content');
   let spy = null;
 
+  // ---------- progreso de lectura (círculo, móvil) ----------
+  const progressFg = document.querySelector('.progress-fg');
+  const progressPct = document.getElementById('progress-pct');
+  const RING = 97.4; // 2πr con r = 15.5
+  let progressTick = false;
+
+  function updateProgress() {
+    progressTick = false;
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - window.innerHeight;
+    const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+    if (progressFg) progressFg.style.strokeDashoffset = RING * (1 - p);
+    if (progressPct) progressPct.textContent = Math.round(p * 100) + '%';
+  }
+
+  function scheduleProgress() {
+    if (progressTick) return;
+    progressTick = true;
+    requestAnimationFrame(updateProgress);
+  }
+
+  window.addEventListener('scroll', scheduleProgress, { passive: true });
+  window.addEventListener('resize', scheduleProgress);
+
   // ---------- tema ----------
   function applyTheme(t) {
     rootEl.dataset.theme = t;
@@ -334,6 +358,7 @@
     buildToc(content);
     renderPager();
     window.scrollTo(0, 0);
+    updateProgress();
 
     const nodes = content.querySelectorAll('.mermaid');
     if (nodes.length) { try { await mermaid.run({ nodes }); } catch (e) { console.warn('mermaid:', e); } }
@@ -366,6 +391,7 @@
       e.preventDefault();
       const t = document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));
       if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (a.closest('#toc')) document.body.classList.remove('toc-open');
     }
   });
 
@@ -374,8 +400,18 @@
     applyTheme(rootEl.dataset.theme === 'dark' ? 'light' : 'dark');
     if (state.current) openNote(state.current);
   });
-  $('#menu-btn').addEventListener('click', () => document.body.classList.toggle('sb-open'));
-  $('#scrim').addEventListener('click', () => document.body.classList.remove('sb-open'));
+  $('#menu-btn').addEventListener('click', () => {
+    document.body.classList.toggle('sb-open');
+    document.body.classList.remove('toc-open');
+  });
+  $('#progress-btn').addEventListener('click', () => {
+    document.body.classList.toggle('toc-open');
+    document.body.classList.remove('sb-open');
+  });
+  $('#scrim').addEventListener('click', () => {
+    document.body.classList.remove('sb-open');
+    document.body.classList.remove('toc-open');
+  });
   $('#search').addEventListener('input', (e) => renderNav(e.target.value));
   document.addEventListener('keydown', (e) => {
     const typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName);
@@ -384,7 +420,7 @@
       document.body.classList.add('sb-open');
       $('#search').focus();
     }
-    if (e.key === 'Escape') { $('#search').blur(); document.body.classList.remove('sb-open'); }
+    if (e.key === 'Escape') { $('#search').blur(); document.body.classList.remove('sb-open'); document.body.classList.remove('toc-open'); }
   });
 
   // ---------- arranque ----------
@@ -402,6 +438,7 @@
     }
     renderNav('');
     route();
+    updateProgress();
   }
 
   init();

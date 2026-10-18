@@ -186,6 +186,45 @@ main { padding: 2.5rem 2.5rem 6rem; min-width: 0; }
 .topbar { display: none; }
 #scrim { display: none; }
 
+/* ---------- progreso de lectura (móvil) ---------- */
+.progress-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.progress-btn svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.progress-bg, .progress-fg { fill: none; stroke-width: 3; }
+.progress-bg { stroke: var(--border); }
+.progress-fg {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 97.4;
+  stroke-dashoffset: 97.4;
+  transition: stroke-dashoffset 0.1s linear;
+}
+.progress-pct {
+  position: relative;
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--muted);
+}
+
 /* ---------- markdown ---------- */
 .markdown > *:first-child { margin-top: 0; }
 .markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 {
@@ -378,7 +417,25 @@ summary.callout-title::-webkit-details-marker { display: none; }
     transition: transform 0.2s ease;
   }
   body.sb-open #sidebar { transform: none; }
-  body.sb-open #scrim { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 30; }
+  body.sb-open #scrim,
+  body.toc-open #scrim { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 30; }
+  #topbar-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #toc {
+    display: block;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(80vw, 300px);
+    height: 100vh;
+    z-index: 40;
+    padding: 1.25rem 1rem 2rem;
+    background: var(--bg-2);
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+  }
+  body.toc-open #toc { transform: none; }
   main { padding: 1.5rem 1.1rem 4rem; }
   .markdown h1 { font-size: 1.8rem; }
   .markdown h2 { font-size: 1.4rem; }
