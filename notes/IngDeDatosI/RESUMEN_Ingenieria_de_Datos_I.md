@@ -24,8 +24,10 @@ tags:
 - [UVA 3 — El modelo relacional](#uva-3--el-modelo-relacional)
 - [UVA 4 — Álgebra relacional](#uva-4--álgebra-relacional)
 - [UVA 5 — SQL (lenguaje de consulta estructurado)](#uva-5--sql-lenguaje-de-consulta-estructurado)
+- [UVA 6 — Normalización](#uva-6--normalización)
+- [UVA 7 — Normalización adicional (BCNF, 4FN, 5FN)](#uva-7--normalización-adicional-bcnf-4fn-5fn)
 - [Trabajo Práctico Integrador (TPO)](#trabajo-práctico-integrador-tpo)
-- [Próximas UVAs (6 y 7)](#próximas-uvas-6-y-7)
+- [Tips de examen](#tips-de-examen)
 - [Glosario rápido](#glosario-rápido)
 
 ---
@@ -95,38 +97,72 @@ Los SGBD manejan accesos simultáneos con **control de concurrencia** y **bloque
 
 ### 6. Hashing
 
-Técnica que transforma una **clave** en una **dirección** (valor hash de longitud fija) para acceder rápido a los datos, sin búsquedas secuenciales.
+**Idea central**: el hashing convierte una **clave** (nombre, ID, DNI…) en un **número** que indica la posición (slot) donde se guarda el dato, para encontrarlo en tiempo casi constante **sin recorrer la tabla**.
 
-**Propiedades de una buena función hash**:
-- **Determinista**: misma entrada → misma salida.
-- **Distribuye uniformemente** (evita agrupamientos/colisiones).
+> **Analogía**: una biblioteca que guarda cada libro en un estante calculado a partir de su código, en vez de revisar estante por estante.
 
-**Tipos**:
-- **Estáticas**: función fija.
-- **Dinámicas**: se adaptan al crecimiento.
-- **Perfectas**: sin colisiones (solo en contextos acotados).
-- **Criptográficas** (MD5, SHA-256): costosas, para integridad/seguridad, no para estructuras de datos.
+```mermaid
+flowchart LR
+    K["Clave k<br/>(ej. 10)"] --> H["Función hash<br/>h(k) = k mod m"] --> S["Posición (slot)<br/>en la tabla"]
+```
+
+**Función hash** $h(k)$: fórmula que transforma la clave $k$ en una posición válida dentro de la tabla (que tiene $m$ posiciones).
 
 **Algoritmos más comunes**:
+- **División**: $h(k) = k \bmod m$ (el resto de dividir $k$ entre $m$). Es el más simple y usado.
+- **Multiplicación**: $h(k) = \lfloor m \cdot (k \cdot A \bmod 1) \rfloor$, con $A$ una constante entre 0 y 1.
+- **Plegamiento**: divide la clave en bloques y los suma.
 
-- **División**: $h(k) = k \bmod m$ (donde $m$ es el tamaño de la tabla).
-- **Multiplicación**: usa una constante para dispersar las claves.
-- **Plegamiento**: divide y suma bloques de la clave.
+**Propiedades de una buena función hash**:
+- **Determinista**: la misma clave siempre da la misma posición.
+- **Distribuye uniformemente**: reparte las claves parejo para minimizar colisiones.
+- **Rápida de calcular**.
 
-**Ejemplo paso a paso** (tabla de tamaño 7, claves: 10, 22, 31, 4, 15, 28, 17, 88, 59 con `h(k)=k mod 7`):
+**Ejemplo completo** con $h(k) = k \bmod 7$ (tabla de tamaño $m = 7$). Insertamos las claves **10, 22, 31, 4, 15, 28, 17, 88, 59**:
 
-| Clave | 10 | 22 | 31 | 4 | 15 | 28 | 17 | 88 | 59 |
-|-------|----|----|----|---|----|----|----|----|----|
-| h(k)=k mod 7 | 3 | 1 | 3 | 4 | 1 | 0 | 3 | 4 | 3 |
+| Clave $k$ | Cálculo | Posición |
+|-----------|---------|----------|
+| 10 | $10 \bmod 7$ | **3** |
+| 22 | $22 \bmod 7$ | **1** |
+| 31 | $31 \bmod 7$ | **3** ← colisión con 10 |
+| 4  | $4 \bmod 7$  | **4** |
+| 15 | $15 \bmod 7$ | **1** ← colisión con 22 |
+| 28 | $28 \bmod 7$ | **0** |
+| 17 | $17 \bmod 7$ | **3** ← colisión |
+| 88 | $88 \bmod 7$ | **4** ← colisión con 4 |
+| 59 | $59 \bmod 7$ | **3** ← colisión |
 
-→ Colisiones en posiciones 1, 3 y 4.
+**Colisión**: dos claves distintas caen en la misma posición. Es **inevitable** si hay más claves que slots, por eso hay que resolverla:
 
-**Colisiones y resolución** (dos claves distintas → mismo hash):
-- **Encadenamiento**: lista enlazada en la misma posición.
-- **Direccionamiento abierto**: buscar otra posición libre (lineal, cuadrático o doble hashing).
-- **Área de desborde**: zona separada para los que colisionan.
+**1. Encadenamiento (chaining)** — cada posición guarda una **lista enlazada** de todos los valores que colisionaron allí:
 
-**Usos**: búsqueda exacta, `partitioning`/`sharding` en BD distribuidas, detección de duplicados, verificación de integridad (checksums), caché, autenticación.
+| Posición | Contenido |
+|----------|-----------|
+| 0 | 28 |
+| 1 | 22 → 15 |
+| 2 | *(vacío)* |
+| 3 | 10 → 31 → 17 → 59 |
+| 4 | 4 → 88 |
+| 5 | *(vacío)* |
+| 6 | *(vacío)* |
+
+**2. Direccionamiento abierto** — si el slot está ocupado, se busca otro siguiendo una secuencia:
+- **Lineal**: se prueba $h(k)+1,\; h(k)+2,\; \dots$
+- **Cuadrático**: se prueba $h(k)+1^2,\; h(k)+2^2,\; \dots$
+- **Doble hashing**: una segunda función hash calcula el "salto".
+
+**3. Área de desborde** — zona separada para los que colisionan.
+
+**Tipos de hashing**:
+- **Estático**: la tabla y la función no cambian de tamaño (se degrada al crecer los datos).
+- **Dinámico**: se agranda/reorganiza cuando crece (ej. hashing extensible).
+- **Perfecto**: sin colisiones (solo si se conocen todas las claves de antemano).
+
+**Factor de carga** $\alpha = \frac{n}{m}$ (claves ÷ slots): a mayor $\alpha$, más colisiones y peor rendimiento.
+
+**Usos**: búsqueda exacta por clave, `partitioning`/`sharding` en BD distribuidas, detección de duplicados, verificación de integridad (checksums), caché, autenticación (aquí con funciones **criptográficas** como SHA-256, más costosas).
+
+**Cuándo NO sirve el hashing**: búsquedas por **rango** ("todos entre 10 y 20") u **ordenamiento**; para eso conviene un índice ordenado tipo **árbol B+**.
 
 ### 7. Índices
 
@@ -496,7 +532,7 @@ $$\rho_{\text{nombre}\to\text{apellido}}(\text{Personas}) \quad\text{→ renombr
 
 **Subconsultas** → se representan como expresiones anidadas (primero se resuelve el conjunto interno).
 
-**SQL Server Express 2022**: edición gratuita para aprender; se usa con **SSMS** y permite ver el **plan de ejecución** (cómo se traduce SQL a operaciones relacionales).
+**SQL Server Express 2022**: edición gratuita para aprender; se usa con **SSMS** y permite ver el **plan de ejecución** (cómo se traduce SQL a operaciones relacionales). **Alternativa**: **MySQL + XAMPP/phpMyAdmin** (es la que se usa en el caso "ACADEMICA" de la UVA 3 y en el TPO).
 
 ---
 
@@ -575,7 +611,45 @@ DELETE FROM empleados WHERE depto_id = 2;
 
 > **Seguridad en DML**: usar siempre `WHERE` para no afectar todos los registros.
 
-### 4. Subconsultas
+### 4. JOINs entre tablas
+
+Los JOINs combinan filas de dos o más tablas mediante una condición de unión. **Es el tema central de las consultas prácticas del examen** (importa la estructura de la sentencia y la condición `ON`, no tanto si "corre" en un motor específico).
+
+| Tipo | Qué devuelve |
+|------|--------------|
+| `INNER JOIN` | Solo las filas que tienen coincidencia en **ambas** tablas. |
+| `LEFT JOIN` | Todas las filas de la izquierda + coincidencias de la derecha (con `NULL` si no hay). |
+| `RIGHT JOIN` | Todas las filas de la derecha + coincidencias de la izquierda. |
+| `FULL OUTER JOIN` | Todas las filas de ambas (MySQL no lo soporta directo). |
+| `CROSS JOIN` | Producto cartesiano (todas las combinaciones). |
+
+```sql
+-- INNER JOIN (lo más común): empleado + su departamento
+SELECT e.nombre, d.nombre_departamento
+FROM empleados AS e
+INNER JOIN departamentos AS d ON e.depto_id = d.id;
+
+-- LEFT JOIN: todos los empleados, incluso los que no tienen departamento
+SELECT e.nombre, d.nombre_departamento
+FROM empleados AS e
+LEFT JOIN departamentos AS d ON e.depto_id = d.id;
+
+-- RIGHT JOIN
+SELECT e.nombre, d.nombre_departamento
+FROM empleados AS e
+RIGHT JOIN departamentos AS d ON e.depto_id = d.id;
+
+-- JOIN de 3 tablas (encadenar INNER JOIN)
+SELECT a.id_alumno, a.nombre, c.nombre_ciudad, r.anio_academico
+FROM alumnos AS a
+INNER JOIN ciudades AS c       ON a.id_ciudad_nacimiento = c.id_ciudad
+INNER JOIN reinscripciones AS r ON a.id_alumno = r.id_alumno
+WHERE c.nombre_ciudad = 'Tandil' AND r.anio_academico = 2026;
+```
+
+> **Sobre el orden de los JOINs** (ejemplo del profe: `ALUMNOS` 5.000, `CIUDADES` 30.000 y `REINSCRIPCIONES` 20.000 registros): el **optimizador de consultas** del motor analiza las estadísticas y decide el orden físico más eficiente, **sin importar el orden en que escribas los JOINs**. A nivel lógico lo que importa es que el código quede **legible** y que la **condición de unión (`ON`) sea correcta (PK = FK)**. Solo en motores muy antiguos, o forzando con *hints* (ej. `STRAIGHT_JOIN` en MySQL), el orden escrito tendría impacto.
+
+### 5. Subconsultas
 
 `SELECT` anidado dentro de otra consulta; se ejecuta **antes** que la consulta externa.
 
@@ -621,7 +695,7 @@ WITH altas AS (SELECT * FROM empleados WHERE salario > 50000)
 SELECT * FROM altas;
 ```
 
-### 5. Operadores de conjunto
+### 6. Operadores de conjunto
 
 Requieren misma cantidad y tipo de columnas.
 
@@ -635,17 +709,17 @@ SELECT id FROM empleados       EXCEPT       SELECT emp_id FROM asignaciones;  --
 (SELECT nombre FROM empleados UNION SELECT nombre FROM ex_empleados) ORDER BY nombre;
 ```
 
-### 6. Funciones del sistema
+### 7. Funciones del sistema
 
 - **Cadena**: `UPPER()`, `LOWER()`, `LENGTH()`, `SUBSTRING()`, `TRIM()`, `CONCAT()`, `SUBSTRING_INDEX()`.
 - **Fecha/hora**: `CURRENT_DATE`, `NOW()`, `DATEADD()`, `DATEDIFF()`, `YEAR()`, `MONTH()`.
-- **Matemáticas**: `ROUND()`, `CEILING()`, `FLOOR()`, `ABS()`.
+- **Matemáticas**: `ROUND()` (redondea al decimal pedido), `CEILING()` (redondea hacia arriba), `FLOOR()` (redondea hacia abajo), `ABS()` (valor absoluto, quita el signo).
 - **Agregación**: `SUM()`, `AVG()`, `MIN()`, `MAX()`, `COUNT()`.
 - **Conversión**: `CAST()`, `CONVERT()`.
 
 **Operadores**: `AND`, `OR`, `NOT`, `BETWEEN`, `IN`, `LIKE`.
 
-### 7. Vistas
+### 8. Vistas
 
 Consulta guardada que actúa como **tabla virtual** (no almacena datos).
 
@@ -660,7 +734,7 @@ DROP VIEW ventas_2025;
 - Sirven para seguridad (ocultar columnas sensibles), segmentación y reutilización.
 - `WITH CHECK OPTION` evita modificar registros fuera del conjunto visible.
 
-### 8. Procedimientos almacenados (Stored Procedures)
+### 9. Procedimientos almacenados (Stored Procedures)
 
 Instrucciones SQL guardadas, ejecutables repetidamente. Parámetros `IN`, `OUT`, `INOUT`.
 
@@ -677,7 +751,7 @@ DROP PROCEDURE listar_clientes();
 
 Pueden usar `IF`, `CASE`, bucles `WHILE` y manejo de errores.
 
-### 9. Funciones definidas por el usuario (UDF)
+### 10. Funciones definidas por el usuario (UDF)
 
 Similares a procedimientos pero **siempre devuelven un valor**.
 
@@ -693,7 +767,7 @@ SELECT calcular_descuento(precio) FROM productos;
 
 **Diferencias**: funciones devuelven un valor y se usan dentro de SQL; procedimientos pueden tener varias salidas y efectos colaterales. Nombrado: `usp_` (procedimientos), `fn_` (funciones).
 
-### 10. Seguridad en bases de datos
+### 11. Seguridad en bases de datos
 
 Principios: **confidencialidad, integridad, disponibilidad**. Riesgos: acceso no autorizado, **inyección SQL**, manipulación de privilegios, fuga de información.
 
@@ -730,7 +804,7 @@ ENCRYPTION BY SERVER CERTIFICATE MiCertificado;
 - Cifrado en reposo (TDE) y en tránsito (SSL).
 - Backups cifrados y probados.
 
-### 11. Ejercicio práctico: `magnitudes_por_ruta.csv`
+### 12. Ejercicio práctico: `magnitudes_por_ruta.csv`
 
 Archivo con vuelos aéreos. Encabezado:
 
@@ -819,6 +893,177 @@ CALL obtener_ciudades_por_clasificacion('Cabotaje');
 
 ---
 
+## UVA 6 — Normalización
+
+La **normalización** es un proceso sistemático para **reorganizar las tablas** y reducir la **redundancia**, evitando **anomalías** y mejorando la **integridad**. Se logra dividiendo tablas grandes en tablas más pequeñas relacionadas por claves. La teoría fue introducida por **Codd** y se materializa en las **Formas Normales (FN)**, que son filtros progresivos de calidad del diseño.
+
+**Beneficios**: menos redundancia, más integridad, mantenimiento simple (cambiar en un solo lugar), flexibilidad y escalabilidad.
+**Desventajas**: más `JOIN`s en las consultas y un esquema más complejo de entender.
+
+### 1. Anomalías de una BD no normalizada
+
+| Anomalía | Qué pasa | Ejemplo |
+|----------|----------|---------|
+| **Inserción** | No se puede agregar un dato sin depender de otro que aún no existe. | Agregar el curso "Física" y su profesor sin tener todavía estudiantes inscritos. |
+| **Actualización** | Un cambio hay que repetirlo en muchas filas. | Cambiar "Prof. González" → "Prof. López" en todas las filas del curso. |
+| **Eliminación** | Borrar un registro hace perder información útil. | Dar de baja a Ana de Historia hace perder que "Prof. Ramírez dicta Historia". |
+
+### 2. Dependencias funcionales (DF)
+
+Una **DF** $X \to Y$ significa que, para cada valor de $X$, existe **un único** valor de $Y$. Ejemplo: `DNI → Nombre`.
+
+**Notación**: $X$ es el **determinante**, $Y$ el **dependiente**. Si $A \to B$ y $A \to C$, entonces $A \to \{B, C\}$.
+
+| Tipo de DF | Definición | Ejemplo |
+|-----------|------------|---------|
+| **Completa** | $Y$ depende de **todo** el determinante. | `{id_alumno, id_curso} → nota_final` (ninguno por separado la determina). |
+| **Parcial** | $Y$ depende de **parte** de una clave compuesta. | `id_alumno → nombre_alumno` cuando la clave es `(id_alumno, id_curso)`. |
+| **Transitiva** | $Y$ depende de un atributo no clave que a su vez depende de la clave. | `id_empleado → ciudad` y `ciudad → código_postal` ⇒ `id_empleado → código_postal`. |
+| **Trivial** | El dependiente ya está incluido en el determinante. | `AB → A`. Siempre se cumple, no aporta nada. |
+
+**Propiedades (reglas de inferencia)**:
+- **Reflexividad**: si $B \subseteq A$, entonces $A \to B$.
+- **Aumento**: si $A \to B$, entonces $AC \to BC$.
+- **Transitividad**: si $A \to B$ y $B \to C$, entonces $A \to C$.
+- **Unión / Descomposición**: $A \to B$ y $A \to C$ ⇔ $A \to BC$.
+
+**Cierre de atributos** $A^{+}$: todos los atributos que $A$ puede determinar aplicando las DF. Sirve para hallar **claves candidatas**: si $A^{+}$ = todos los atributos, $A$ es una **superclave**; la superclave **mínima** es una **clave candidata**.
+
+**Ejemplo de cierre**: en $R(A,B,C,D)$ con $A\to B$, $B\to C$, $C\to D$:
+$$A^{+} = \{A\} \rightarrow \{A,B\} \rightarrow \{A,B,C\} \rightarrow \{A,B,C,D\}$$ ⇒ $A$ es clave.
+
+### 3. Primera, Segunda y Tercera Forma Normal
+
+| FN | Regla | Qué elimina |
+|----|-------|-------------|
+| **1FN** | Atributos **atómicos** (un valor por celda). | Grupos repetitivos / multivaluados. |
+| **2FN** | Estar en 1FN + atributos no clave dependen de **toda** la clave. | Dependencias **parciales** (solo con clave compuesta). |
+| **3FN** | Estar en 2FN + sin dependencias **transitivas** entre no clave. | Dependencias transitivas. |
+
+- **1FN**: `ALUMNOS(id_alumno, nombre, telefonos)` con varios teléfonos en una celda (`"24941111, 24942222"`) → separar en filas o crear `TELEFONOS_ALUMNOS`.
+- **2FN**: `REINSCRIPCIONES(id_alumno, anio_academico, fecha_nacimiento)`; la `fecha_nacimiento` depende solo de `id_alumno` (no del año) → moverla a `ALUMNOS`.
+- **3FN**: `ALUMNOS(id_alumno, id_ciudad_nacimiento, nombre_ciudad, codigo_postal)`; `nombre_ciudad` depende de `id_ciudad_nacimiento`, no de `id_alumno` → crear tabla `CIUDADES`.
+
+**La "tabla universal"** (ejemplo del profe) que concentra las tres dependencias:
+
+| 🔑 id_alumno | 🔑 id_curso | nota_final | nombre_alumno | id_profesor | nombre_profesor |
+|--------------|-------------|------------|---------------|-------------|-----------------|
+
+- DF **completa**: `{id_alumno, id_curso} → nota_final`.
+- DF **parcial**: `id_alumno → nombre_alumno`.
+- DF **transitiva**: `id_curso → id_profesor → nombre_profesor`.
+
+### 4. Traslado del modelo ER al relacional
+
+(Reglas ya vistas en UVA 3; se repasan porque sustentan la normalización.)
+1. **Entidad fuerte** → tabla (atributos = columnas, la PK se conserva).
+2. **Relación 1:N** → FK en el lado "muchos".
+3. **Relación M:N** → tabla intermedia con clave compuesta (PK = las FKs de ambas).
+4. **Entidad débil** → tabla cuya PK incluye la PK de la entidad fuerte (ej. `LINEA_FACTURA(id_factura, nro_linea)`).
+
+Ejemplo M:N (ESTUDIANTE ↔ CURSO):
+
+```sql
+CREATE TABLE ESTUDIANTE (
+  id_estudiante INT PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE CURSO (
+  id_curso INT PRIMARY KEY,
+  comision VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE INSCRIPCIONES (
+  id_estudiante INT,
+  id_curso INT,
+  fecha DATE NOT NULL,
+  PRIMARY KEY (id_estudiante, id_curso),          -- PK compuesta
+  FOREIGN KEY (id_estudiante) REFERENCES ESTUDIANTE(id_estudiante) ON DELETE CASCADE,
+  FOREIGN KEY (id_curso) REFERENCES CURSO(id_curso) ON DELETE CASCADE
+);
+```
+
+> En la tabla intermedia, `id_estudiante` e `id_curso` cumplen **doble rol**: juntos forman la **PK compuesta** y por separado actúan como **FKs** hacia sus tablas de origen.
+
+---
+
+## UVA 7 — Normalización adicional (BCNF, 4FN, 5FN)
+
+### 1. Claves candidatas (repaso y elección)
+
+Una **clave candidata** es un conjunto **mínimo** de atributos que identifica de forma única cada tupla (**unicidad + minimalidad**). Puede haber varias; una se elige como **PK** y el resto quedan como **alternativas**.
+
+**Criterios para elegir la PK**: **estabilidad** (que no cambie), **brevedad** (corta) y **comprensibilidad**. Se prefiere clave **surrogada** (ID numérico autogenerado) cuando la natural (DNI, email) es inestable.
+
+Ejemplo: en `Alumno(CUIL, legajo, nombre, carrera)`, tanto `CUIL` como `legajo` son claves candidatas.
+
+### 2. BCNF (Forma Normal de Boyce-Codd)
+
+Versión **más estricta de la 3FN**. Una relación está en **BCNF** si, para **toda** DF no trivial $X \to Y$, **$X$ es una superclave**.
+
+La diferencia con 3FN: 3FN admite que el determinante no sea superclave **solo si** el dependiente es atributo primo (parte de una clave); **BCNF no lo admite nunca**.
+
+**Ejemplo de violación (del profe)**: tabla `(alumno, profesor, asignatura)`.
+- Claves candidatas: `(alumno, profesor) → asignatura` y `(alumno, asignatura) → profesor`.
+- DF: `profesor → asignatura` (cada profesor dicta una sola materia).
+- Como `profesor` **no es superclave** (es solo parte de una clave), **viola BCNF**.
+- **Solución**: dividir en `PROFESOR_ASIGNATURA(profesor, asignatura)` y `ALUMNO_PROFESOR(alumno, profesor)`.
+
+### 3. Teorema de Rissanen
+
+Fundamento matemático que valida si una **descomposición** está bien hecha. Descomponer $R$ en $R_1$ y $R_2$ es válido **si y solo si** el `NATURAL JOIN` de ambas reconstruye **exactamente** la tabla original, **sin perder información** y **sin generar registros fantasma**.
+
+**Condición práctica**: los atributos **comunes** entre $R_1$ y $R_2$ deben ser **clave primaria en al menos una** de las dos tablas.
+
+**Ejemplo**: descomponer `ALUMNOS(id_alumno, id_ciudad_nacimiento, nombre_ciudad)` en:
+- $R_1$: `ALUMNOS(id_alumno, id_ciudad_nacimiento)`
+- $R_2$: `CIUDADES(id_ciudad_nacimiento, nombre_ciudad)`
+
+Atributo común = `id_ciudad_nacimiento`, que es **PK en `CIUDADES`** ⇒ **descomposición sin pérdida (lossless join)**.
+
+### 4. 4FN (Cuarta Forma Normal)
+
+Está en **4FN** si está en **BCNF** y **no tiene dependencias multivaluadas** (DMV) no triviales.
+
+Una **DMV** $X \twoheadrightarrow Y$ indica que por cada valor de $X$ hay múltiples valores **independientes** de $Y$ (que no se relacionan entre sí).
+
+**Ejemplo (del profe)**: `AGENTE(agente, idioma, habilidad)`, con `agente ↠ idioma` y `agente ↠ habilidad` (idiomas y habilidades son independientes). Guardar todo junto genera combinaciones cruzadas sin sentido.
+- **Solución**: `AGENTE_IDIOMA(agente, idioma)` y `AGENTE_HABILIDAD(agente, habilidad)`.
+
+Otro ejemplo: `Libro(ISBN, autor, tema)` → `LibroAutor(ISBN, autor)` y `LibroTema(ISBN, tema)`.
+
+### 5. 5FN (Quinta Forma Normal)
+
+También llamada **forma normal de proyección-unión**. Está en **5FN** si está en **4FN** y **no tiene dependencias de unión** (join dependencies) no triviales. Aparece en relaciones **ternarias** (3+ vías) donde la tabla solo se reconstruye uniendo **tres o más** proyecciones (no dos).
+
+**Ejemplo (del profe)**: `ASIGNACIONES(id_alumno, id_materia, id_profesor)` con la regla "si el profesor X dicta la materia Y y el alumno Z cursa Y, entonces Z debe estar asignado a X".
+- **Solución (descomposición triple)**:
+  - `ALUMNOS_MATERIAS(id_alumno, id_materia)`
+  - `PROFESORES_MATERIAS(id_profesor, id_materia)`
+  - `ALUMNOS_PROFESORES(id_alumno, id_profesor)`
+  Solo el JOIN de las **tres** reconstruye la tabla original sin combinaciones falsas.
+
+### 6. Desnormalización
+
+Proceso **inverso** a la normalización: se introducen **redundancias deliberadas** para mejorar el **rendimiento** (menos JOINs).
+
+- **Cuándo**: sistemas de **lectura intensiva** (reporting, dashboards, BI/Data Warehouse), es decir **OLAP**.
+- **OLTP vs OLAP**: OLTP (transaccional) prefiere **normalizar**; OLAP (analítico) prefiere **desnormalizar**.
+- **Ventajas**: consultas más rápidas, menos JOINs, SQL más simple.
+- **Desventajas**: más espacio, actualizaciones complejas, riesgo de inconsistencia.
+
+**Estrategias**:
+1. **Replicar campos** relacionados (ej. nombre del cliente en la tabla de pedidos).
+2. **Columnas calculadas** (ej. total de factura precalculado).
+3. **Tablas resumen** (pre-agregados, ej. total mensual por región).
+4. **Combinar entidades** que siempre se usan juntas.
+5. **Vistas materializadas**.
+
+**Recomendación**: empezar siempre **normalizado** y desnormalizar **solo con evidencia** (métricas de uso), documentando cada cambio. El balance habitual es llegar a **3FN o BCNF**; 4FN y 5FN solo en casos puntuales.
+
+---
+
 ## Trabajo Práctico Integrador (TPO)
 
 **Temática: Aerolíneas** (ejemplo de grupo: **EcoFlight** — análisis del impacto ambiental / emisiones de CO₂ del transporte aéreo argentino).
@@ -849,22 +1094,21 @@ flowchart LR
 
 ---
 
-## Próximas UVAs (6 y 7)
+## Tips de examen
 
-> Temas ya enunciados en el TP Integrador, a completar cuando se agreguen los materiales.
+Formato según el profe: **5 preguntas prácticas + 5 preguntas teóricas**. Entran **todos los temas**, con **énfasis en las filminas que terminan en "adicional"**.
 
-### UVA 6 — Normalización (pendiente)
-- Conceptos fundamentales de normalización.
-- **Dependencias funcionales**.
-- Primera (1FN), segunda (2FN) y tercera (3FN) forma normal.
-- Modelo ER y traslado a diseño de BD.
+- **Prácticas ("cómo se escribiría en SQL")**: importa la **estructura de la sentencia** y los **JOINs** (la condición `ON`, qué tabla va de cada lado), **no tanto si el código "corre" perfecto** en un motor.
+- **Teóricas**: conceptos y definiciones de todas las UVAs (evolución, hashing/índices, SGBD y niveles de abstracción, modelo relacional y claves, álgebra relacional, SQL, normalización 1FN–5FN y BCNF, desnormalización).
 
-### UVA 7 — Normalización adicional (pendiente)
-- Papel de las claves candidatas.
-- **BCNF** (forma normal de Boyce-Codd).
-- Teorema de Rissanen.
-- Cuarta (4FN) y quinta (5FN) forma normal.
-- **Desnormalización**.
+**Qué dominar para las prácticas**:
+1. `SELECT … FROM … [JOIN … ON …] WHERE … [GROUP BY …] [ORDER BY …]`.
+2. Distinguir `INNER JOIN` / `LEFT JOIN` / `RIGHT JOIN`.
+3. Subconsultas (`IN`, `EXISTS`, escalares) y operadores de conjunto (`UNION`, `INTERSECT`, `EXCEPT`).
+4. DDL básico (`CREATE TABLE` con `PRIMARY KEY` / `FOREIGN KEY`).
+5. Traducir álgebra relacional (σ, π, ⨝) a SQL y viceversa.
+
+**Ejemplo tipo** de "escribir el SQL": *listar los alumnos nacidos en Tandil reinscriptos en 2026* (3 tablas, 2 `INNER JOIN` — ver **UVA 5, sección JOINs**).
 
 ---
 
@@ -884,10 +1128,19 @@ flowchart LR
 | **σ / π / ∪ / ∩ / − / × / ⨝ / ρ** | Selección, proyección, unión, intersección, diferencia, producto cartesiano, join natural, renombramiento. |
 | **DER** | Diseño Entidad-Relación. |
 | **Cardinalidad** | 1:1, 1:N, M:N. |
-| **Normalización** | Proceso para reducir redundancia (1FN, 2FN, 3FN, BCNF...). |
+| **Normalización** | Proceso para reducir redundancia y evitar anomalías (1FN → 5FN). |
+| **DF** | Dependencia funcional: $X \to Y$ (X determina un único Y). |
+| **Clave candidata / superclave** | Conjunto mínimo que identifica cada tupla / conjunto que identifica (puede sobrar). |
+| **BCNF** | Forma Normal de Boyce-Codd (más estricta que 3FN). |
+| **4FN / 5FN** | Eliminan dependencias multivaluadas / dependencias de unión. |
+| **DMV** | Dependencia multivaluada ($X \twoheadrightarrow Y$). |
+| **Rissanen** | Teorema que valida descomposiciones sin pérdida (lossless join). |
+| **Desnormalización** | Introducir redundancia a propósito para mejorar el rendimiento. |
+| **JOIN** | Combina filas de varias tablas (INNER, LEFT, RIGHT, FULL, CROSS). |
+| **Anomalías** | Problemas de inserción, actualización y eliminación por mal diseño. |
 | **Vista** | Tabla virtual (consulta guardada). |
 | **Stored Procedure** | Procedimiento almacenado en la BD. |
 | **UDF** | Función definida por el usuario. |
 | **TDE / SSL** | Cifrado en reposo / en tránsito. |
-| **OLTP** | Procesamiento de transacciones en línea. |
+| **OLTP / OLAP** | Transaccional (conviene normalizar) / analítico (conviene desnormalizar). |
 | **B+ / árbol B+** | Estructura balanceada usada como índice. |
